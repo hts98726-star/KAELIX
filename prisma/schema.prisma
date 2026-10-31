@@ -1,0 +1,76 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  role         String         
+  createdAt    DateTime       @default(now())
+  subscriptions Subscription[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  type        String
+  basePrice   Float
+  costPrice   Float
+  notes       String?
+  variantName String?  
+  markupPrice Float    @default(0) 
+}
+
+model Subscription {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  planNumber   String    @unique 
+  billingCycle String    
+  status       String    
+  startDate    DateTime
+  expiryDate   DateTime
+  paymentTerms String
+  invoices     Invoice[]
+}
+
+model Invoice {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  issueDate      DateTime     @default(now())
+  baseAmount     Float
+  taxAmount      Float
+  discountAmount Float        @default(0)
+  totalAmount    Float
+  status         String       
+  payments       Payment[]
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  method    String   
+  amount    Float
+  date      DateTime @default(now())
+  note      String?
+}
+
+model DiscountRule {
+  id          String    @id @default(uuid())
+  type        String    
+  value       Float
+  minQuantity Int       @default(0)
+  minPurchase Float     @default(0)
+  startDate   DateTime
+  endDate     DateTime
+  usageLimit  Int?
+  usedCount   Int       @default(0)
+}

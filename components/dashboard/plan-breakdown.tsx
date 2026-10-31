@@ -3,7 +3,13 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import type { PlanBreakdown as PlanBreakdownType } from "@/lib/dashboard/types";
 
-export function PlanBreakdown({ plans }: { plans: PlanBreakdownType[] }) {
+export function PlanBreakdown({
+  plans,
+  newThisMonth,
+}: {
+  plans: PlanBreakdownType[];
+  newThisMonth: number;
+}) {
   const total = plans.reduce((sum, p) => sum + p.count, 0);
   const circumference = 2 * Math.PI * 69;
   return (
@@ -12,7 +18,7 @@ export function PlanBreakdown({ plans }: { plans: PlanBreakdownType[] }) {
         <div>
           <h2 className="text-sm font-semibold">Subscriptions by plan</h2>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            The mix behind your momentum.
+            Active subscriptions by recurring plan.
           </p>
         </div>
         <Link
@@ -69,19 +75,25 @@ export function PlanBreakdown({ plans }: { plans: PlanBreakdownType[] }) {
             {total.toLocaleString("en-US")}
           </span>
           <span className="mt-1 flex items-center text-[9px] text-emerald-600">
-            <ArrowUpRight className="size-3" />
-            12.8% this month
+            {newThisMonth} started this month
           </span>
         </div>
       </div>
       <div className="mt-auto space-y-3.5">
+        {plans.length === 0 && (
+          <p className="text-center text-[11px] text-muted-foreground">
+            No active subscriptions yet.
+          </p>
+        )}
         {plans.map((p) => (
           <div key={p.plan} className="flex items-center gap-2 text-[11px]">
             <span
               className="size-2 rounded-full"
               style={{ background: p.color }}
             />
-            <span className="flex-1 text-[#777483]">{p.plan}</span>
+            <span className="min-w-0 flex-1 truncate text-[#777483]">
+              {p.plan}
+            </span>
             <span className="font-medium">{p.count}</span>
             <span className="w-10 text-right text-muted-foreground">
               {total ? Math.round((p.count / total) * 100) : 0}%

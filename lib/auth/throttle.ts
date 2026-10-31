@@ -27,3 +27,18 @@ export async function clearLoginAttempts(email: string) {
     .digest("hex");
   await prisma.authAttempt.deleteMany({ where: { key } });
 }
+
+// Password-reset requests: at most five per normalized email per window.
+export async function allowResetRequest(email: string) {
+  const now = Date.now();
+  const bucket = Math.floor(now / WINDOW_MS);
+  const key = createHash("sha256")
+    .update(`reset:${email}:${bucket}`)
+    .digest("hex");
+  const entry = await prisma.authAttempt.upsert({
+    where: { key },
+    create: { key, expiresAt: new Date((bucket + 1) * WINDOW_MS) },
+    update: { attempts: { increment: 1 } },
+  });
+  return entry.attempts <= 5;
+}

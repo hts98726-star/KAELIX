@@ -11,7 +11,7 @@ export async function GET(
       where: {
         id,
         ...(user.role === "CUSTOMER"
-          ? { subscription: { userId: user.id } }
+          ? { subscription: { userId: user.id }, status: { not: "DRAFT" } }
           : {}),
       },
     });

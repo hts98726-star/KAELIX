@@ -11,11 +11,11 @@ export const metadata: Metadata = { title: "Log in" };
 async function Login({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string }>;
+  searchParams: Promise<{ registered?: string; reset?: string }>;
 }) {
   const user = await getCurrentUser();
   if (user) redirect(roleHome(user.role));
-  const { registered } = await searchParams;
+  const { registered, reset } = await searchParams;
   return (
     <main className="flex min-h-dvh flex-col bg-[#f8f6fd] px-6 py-8">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
@@ -52,7 +52,23 @@ async function Login({
               Your customer account was created. Log in to open your portal.
             </p>
           )}
+          {reset === "1" && (
+            <p
+              role="status"
+              className="mb-5 rounded-lg bg-emerald-50 p-3 text-xs leading-6 text-emerald-700"
+            >
+              Your password was reset. Log in with your new password.
+            </p>
+          )}
           <LoginForm />
+          <p className="mt-4 text-center text-xs">
+            <Link
+              href="/forgot-password"
+              className="font-medium text-primary hover:underline"
+            >
+              Forgot your password?
+            </Link>
+          </p>
           <p className="mt-7 border-t pt-5 text-center text-xs text-muted-foreground">
             New here?{" "}
             <Link
@@ -68,7 +84,7 @@ async function Login({
   );
 }
 export default function LoginPage(props: {
-  searchParams: Promise<{ registered?: string }>;
+  searchParams: Promise<{ registered?: string; reset?: string }>;
 }) {
   return (
     <Suspense fallback={<div className="min-h-dvh bg-[#f8f6fd]" />}>

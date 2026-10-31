@@ -11,8 +11,13 @@ export function WorkspaceHeading({
 }: {
   title: string;
   description: string;
-  action?: "checkout" | "signup";
+  action?: "checkout" | "signup" | "subscription" | "none";
 }) {
+  const links = {
+    checkout: { href: "/checkout", label: "New checkout" },
+    signup: { href: "/signup", label: "Create account" },
+    subscription: { href: "/subscriptions/new", label: "New subscription" },
+  } as const;
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -28,12 +33,14 @@ export function WorkspaceHeading({
           {description}
         </p>
       </div>
-      <Button asChild>
-        <Link href={action === "signup" ? "/signup" : "/checkout"}>
-          <Plus />
-          {action === "signup" ? "Create account" : "New checkout"}
-        </Link>
-      </Button>
+      {action !== "none" && (
+        <Button asChild>
+          <Link href={links[action].href}>
+            <Plus />
+            {links[action].label}
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }

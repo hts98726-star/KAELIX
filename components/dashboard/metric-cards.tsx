@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { DashboardMetric } from "@/lib/dashboard/types";
-import { currency } from "@/lib/utils";
+import { formatMoney } from "@/lib/commerce/format";
 
 const icons = {
   subscriptions: CreditCard,
@@ -26,7 +26,7 @@ const accents = {
 export function MetricCards({ metrics }: { metrics: DashboardMetric[] }) {
   return (
     <section
-      aria-label="Business metrics for October 2026"
+      aria-label="Business metrics"
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
     >
       {metrics.map((metric) => {
@@ -50,7 +50,7 @@ export function MetricCards({ metrics }: { metrics: DashboardMetric[] }) {
             <div className="mt-3.5 flex items-end justify-between gap-2">
               <p className="text-[29px] leading-none font-semibold tracking-[-1.1px] tabular-nums">
                 {metric.format === "currency"
-                  ? currency(metric.value)
+                  ? formatMoney(metric.value)
                   : metric.value.toLocaleString("en-US")}
               </p>
               <svg
@@ -72,16 +72,21 @@ export function MetricCards({ metrics }: { metrics: DashboardMetric[] }) {
                 />
               </svg>
             </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[10px]">
-              <span className="flex items-center gap-0.5 rounded bg-emerald-50 px-1 py-0.5 font-medium text-emerald-600">
-                {metric.direction === "up" ? (
-                  <ArrowUpRight className="size-3" />
-                ) : (
-                  <ArrowDownLeft className="size-3" />
-                )}
-                {metric.change}
-              </span>
-              <span className="text-muted-foreground">vs. previous month</span>
+            <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[10px]">
+              {metric.trend && (
+                <span
+                  className={`flex items-center gap-0.5 rounded px-1 py-0.5 font-medium ${metric.trend.direction === "down" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}
+                  title="Compared with the previous month"
+                >
+                  {metric.trend.direction === "down" ? (
+                    <ArrowDownLeft className="size-3" />
+                  ) : (
+                    <ArrowUpRight className="size-3" />
+                  )}
+                  {metric.trend.value}
+                </span>
+              )}
+              <span className="text-muted-foreground">{metric.detail}</span>
             </div>
           </Card>
         );

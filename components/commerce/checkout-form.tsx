@@ -76,7 +76,21 @@ export function CheckoutForm({
       0,
     ),
   );
-  const tax = money(subtotal * 0.1);
+  // Mirrors the server: tax is computed per tax rate on the line amounts.
+  const byRate = new Map<number, number>();
+  for (const item of items) {
+    const product = products.find((entry) => entry.id === item.productId)!;
+    byRate.set(
+      product.taxRate,
+      (byRate.get(product.taxRate) ?? 0) + money(price(product) * item.quantity),
+    );
+  }
+  const tax = money(
+    [...byRate].reduce(
+      (sum, [rate, amount]) => sum + money((money(amount) * rate) / 100),
+      0,
+    ),
+  );
   const total = money(subtotal + tax);
   const valid =
     customer &&
@@ -450,7 +464,7 @@ export function CheckoutForm({
             <dd>{currency(subtotal)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Tax (10%)</dt>
+            <dt className="text-muted-foreground">Tax</dt>
             <dd>{currency(tax)}</dd>
           </div>
           <div className="flex justify-between border-t pt-4 text-lg font-semibold">

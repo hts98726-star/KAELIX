@@ -9,19 +9,27 @@ import {
   WorkspaceUnavailable,
 } from "@/components/commerce/workspace-states";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getProducts } from "@/lib/commerce/data";
+import { getProducts, getTaxRules } from "@/lib/commerce/data";
 export const metadata: Metadata = { title: "Products" };
 async function ProductData() {
   await connection();
   const user = await requirePageUser(["ADMIN", "STAFF"]);
-  let products;
+  let data;
   try {
-    products = await getProducts();
+    const [products, taxRules] = await Promise.all([
+      getProducts({ includeArchived: user.role === "ADMIN" }),
+      getTaxRules(),
+    ]);
+    data = { products, taxRules };
   } catch {
     return <WorkspaceUnavailable />;
   }
   return (
-    <ProductCatalog products={products} canCreate={user.role === "ADMIN"} />
+    <ProductCatalog
+      products={data.products}
+      taxRules={data.taxRules}
+      canCreate={user.role === "ADMIN"}
+    />
   );
 }
 function ProductsPageContent() {
@@ -29,7 +37,7 @@ function ProductsPageContent() {
     <div className="page-enter space-y-7">
       <WorkspaceHeading
         title="Good things to offer"
-        description="Your catalog, your prices. Products saved here are available for new subscriptions at checkout."
+        description="Your catalog, your prices. Products power checkout, recurring plans, and quotation templates."
       />
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <ProductData />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import {
   Select,
@@ -11,30 +11,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { RevenuePoint } from "@/lib/dashboard/types";
-import { cn, currency } from "@/lib/utils";
+import { formatMoney } from "@/lib/commerce/format";
+import { cn } from "@/lib/utils";
+
+// Round the axis up to a readable step (1, 2, 5 × 10ⁿ).
+function niceMax(value: number) {
+  if (value <= 0) return 100;
+  const step = 10 ** Math.floor(Math.log10(value));
+  return [1, 2, 5, 10].map((m) => m * step).find((n) => n >= value)!;
+}
+function axisLabel(value: number) {
+  return value >= 1000
+    ? `$${(value / 1000).toFixed(value >= 10_000 ? 0 : 1)}k`
+    : `$${Math.round(value)}`;
+}
 
 export function RevenueChart({ data }: { data: RevenuePoint[] }) {
   const id = useId();
   const [range, setRange] = useState("6");
   const [hover, setHover] = useState<number | null>(null);
-  const [showPrevious, setShowPrevious] = useState(true);
+  const [showInvoiced, setShowInvoiced] = useState(true);
   const points = data.slice(-Number(range));
   const last = points.at(-1);
   const previous = points.at(-2);
   const change =
-    last && previous && previous.current
-      ? (((last.current - previous.current) / previous.current) * 100).toFixed(
-          1,
-        )
-      : "0";
-  const max = Math.max(
-    60000,
-    ...points.map((p) => Math.max(p.current, p.previous)),
+    last && previous && previous.collected
+      ? ((last.collected - previous.collected) / previous.collected) * 100
+      : null;
+  const max = niceMax(
+    Math.max(...points.map((p) => Math.max(p.collected, p.invoiced))),
   );
-  const plot = (n: number, index: number) =>
-    `${48 + (index / Math.max(1, points.length - 1)) * 642},${202 - (n / max) * 180}`;
-  const currentLine = points.map((p, i) => plot(p.current, i)).join(" ");
-  const previousLine = points.map((p, i) => plot(p.previous, i)).join(" ");
+  const x = (index: number) =>
+    48 + (index / Math.max(1, points.length - 1)) * 642;
+  const y = (n: number) => 202 - (n / max) * 180;
+  const collectedLine = points
+    .map((p, i) => `${x(i)},${y(p.collected)}`)
+    .join(" ");
+  const invoicedLine = points
+    .map((p, i) => `${x(i)},${y(p.invoiced)}`)
+    .join(" ");
 
   return (
     <Card className="min-w-0 p-5 sm:p-6">
@@ -42,7 +57,7 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
         <div>
           <h2 className="text-sm font-semibold">Revenue overview</h2>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            A little perspective on your growth.
+            Payments collected against invoices issued, by month.
           </p>
         </div>
         <Select
@@ -59,6 +74,7 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="12">Last 12 months</SelectItem>
             <SelectItem value="6">Last 6 months</SelectItem>
             <SelectItem value="3">Last 3 months</SelectItem>
           </SelectContent>
@@ -66,14 +82,27 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
       </div>
       <div className="mt-5 flex flex-wrap items-center gap-2.5">
         <span className="text-[28px] leading-none font-semibold tracking-[-1px]">
-          {currency(last?.current ?? 0)}
+          {formatMoney(last?.collected ?? 0)}
         </span>
-        <span className="flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-1 text-[10px] font-medium text-emerald-600">
-          <TrendingUp className="size-3" />
-          {change}%
-        </span>
+        {change !== null && (
+          <span
+            className={cn(
+              "flex items-center gap-0.5 rounded-md px-1.5 py-1 text-[10px] font-medium",
+              change < 0
+                ? "bg-rose-50 text-rose-600"
+                : "bg-emerald-50 text-emerald-600",
+            )}
+          >
+            {change < 0 ? (
+              <TrendingDown className="size-3" />
+            ) : (
+              <TrendingUp className="size-3" />
+            )}
+            {change.toFixed(1)}%
+          </span>
+        )}
         <span className="text-[10px] text-muted-foreground">
-          vs. previous month
+          collected this month{change !== null && " vs. previous month"}
         </span>
       </div>
       <div className="relative mt-5">
@@ -89,7 +118,7 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
             {points
               .map(
                 (p) =>
-                  `${p.month}: ${currency(p.current)}, comparison: ${currency(p.previous)}`,
+                  `${p.month} ${p.year}: collected ${formatMoney(p.collected)}, invoiced ${formatMoney(p.invoiced)}`,
               )
               .join(". ")}
           </desc>
@@ -110,17 +139,17 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
                 strokeDasharray="3 4"
               />
               <text x="0" y={26 + n * 45} fontSize="10" fill="#9996a7">
-                ${((max / 1000) * (1 - n / 4)).toFixed(0)}k
+                {axisLabel(max * (1 - n / 4))}
               </text>
             </g>
           ))}
           <polygon
-            points={`48,202 ${currentLine} 690,202`}
+            points={`48,202 ${collectedLine} 690,202`}
             fill={`url(#${id}-fill)`}
           />
-          {showPrevious && (
+          {showInvoiced && (
             <polyline
-              points={previousLine}
+              points={invoicedLine}
               fill="none"
               stroke="#d4c8f5"
               strokeWidth="2.2"
@@ -131,53 +160,53 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
           )}
           <polyline
             className="chart-line"
-            points={currentLine}
+            points={collectedLine}
             fill="none"
             stroke="#8c6be8"
             strokeWidth="3"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
-          {points.map((p, i) => {
-            const x = 48 + (i / Math.max(1, points.length - 1)) * 642;
-            return (
-              <g key={p.month}>
-                <text
-                  x={x}
-                  y="229"
-                  textAnchor="middle"
-                  fontSize="10"
-                  fill="#9996a7"
-                >
-                  {p.month}
-                </text>
-                <circle
-                  cx={x}
-                  cy={202 - (p.current / max) * 180}
-                  r={hover === i ? 5 : 3.5}
-                  fill="white"
-                  stroke="#8c6be8"
-                  strokeWidth="2"
-                />
-                <rect
-                  x={x - 35}
-                  y="0"
-                  width="70"
-                  height="205"
-                  fill="transparent"
-                  onMouseEnter={() => setHover(i)}
-                />
-              </g>
-            );
-          })}
+          {points.map((p, i) => (
+            <g key={`${p.year}-${p.month}`}>
+              <text
+                x={x(i)}
+                y="229"
+                textAnchor="middle"
+                fontSize="10"
+                fill="#9996a7"
+              >
+                {p.month}
+              </text>
+              <circle
+                cx={x(i)}
+                cy={y(p.collected)}
+                r={hover === i ? 5 : 3.5}
+                fill="white"
+                stroke="#8c6be8"
+                strokeWidth="2"
+              />
+              <rect
+                x={x(i) - 35}
+                y="0"
+                width="70"
+                height="205"
+                fill="transparent"
+                onMouseEnter={() => setHover(i)}
+              />
+            </g>
+          ))}
         </svg>
         {hover !== null && points[hover] && (
           <div className="pointer-events-none absolute top-1 right-3 rounded-lg border bg-white px-3 py-2 text-xs shadow-md">
             <span className="text-muted-foreground">
-              {points[hover].month} 2026
+              {points[hover].month} {points[hover].year}
             </span>
             <p className="mt-1 font-semibold text-primary">
-              {currency(points[hover].current)}
+              {formatMoney(points[hover].collected)} collected
+            </p>
+            <p className="mt-0.5 text-muted-foreground">
+              {formatMoney(points[hover].invoiced)} invoiced
             </p>
           </div>
         )}
@@ -185,18 +214,18 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
       <div className="mt-3 flex items-center justify-center gap-5 text-[10px]">
         <span className="flex items-center gap-1.5">
           <span className="h-0.5 w-4 rounded bg-[#8c6be8]" />
-          Monthly revenue
+          Collected
         </span>
         <button
-          aria-pressed={showPrevious}
-          onClick={() => setShowPrevious(!showPrevious)}
+          aria-pressed={showInvoiced}
+          onClick={() => setShowInvoiced(!showInvoiced)}
           className={cn(
             "flex items-center gap-1.5 rounded px-1 py-1 text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            !showPrevious && "line-through opacity-60",
+            !showInvoiced && "line-through opacity-60",
           )}
         >
           <span className="w-4 border-t-2 border-dashed border-[#d4c8f5]" />
-          Comparison period
+          Invoiced
         </button>
       </div>
     </Card>

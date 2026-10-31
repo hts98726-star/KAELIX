@@ -16,5 +16,14 @@ export type ProductOption = {
   variantName: string | null;
   markupPrice: number;
   notes: string | null;
+  taxRate: number;
+};
+export type CatalogProduct = ProductOption & {
+  costPrice: number;
+  active: boolean;
+  taxRuleId: string | null;
+  taxName: string | null;
+  variantCount: number;
+  planCount: number;
 };
 export type CartItem = { productId: string; quantity: number };

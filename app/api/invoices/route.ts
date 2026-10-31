@@ -5,7 +5,10 @@ export async function GET() {
     const user = await authorize();
     const data = await prisma.invoice.findMany({
       where:
-        user.role === "CUSTOMER" ? { subscription: { userId: user.id } } : {},
+        // Drafts are internal until an operator confirms them.
+        user.role === "CUSTOMER"
+          ? { subscription: { userId: user.id }, status: { not: "DRAFT" } }
+          : {},
       orderBy: { issueDate: "desc" },
     });
     return Response.json(

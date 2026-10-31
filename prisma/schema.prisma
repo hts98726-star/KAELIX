@@ -8,77 +8,204 @@ generator client {
 }
 
 model User {
-  id           String         @id @default(uuid())
-  email        String         @unique
-  passwordHash String
-  role         String         // "ADMIN", "STAFF", "CUSTOMER"
-  createdAt    DateTime       @default(now())
+  id            String               @id @default(uuid())
+  email         String               @unique
+  name          String?
+  passwordHash  String
+  role          String // "ADMIN", "STAFF", "CUSTOMER"
+  createdAt     DateTime             @default(now())
   subscriptions Subscription[]
   sessions      AuthSession[]
+  resetTokens   PasswordResetToken[]
+
+  @@index([role])
 }
 
 model Product {
-  id                String             @id @default(uuid())
+  id                String                  @id @default(uuid())
   name              String
-  type              String
+  type              String // "SERVICE", "SOFTWARE", "ADD_ON", "GOODS"
   basePrice         Float
   costPrice         Float
   notes             String?
-  variantName       String?  
-  markupPrice       Float              @default(0) 
-  subscriptionLines SubscriptionLine[] // Added relation field here
+  // Legacy single variant: its markup is always added. New variants live in ProductVariant.
+  variantName       String?
+  markupPrice       Float                   @default(0)
+  active            Boolean                 @default(true)
+  createdAt         DateTime                @default(now())
+  taxRuleId         String?
+  taxRule           TaxRule?                @relation(fields: [taxRuleId], references: [id])
+  subscriptionLines SubscriptionLine[]
+  variants          ProductVariant[]
+  plans             Plan[]
+  discountRules     DiscountRule[]
+  templateLines     QuotationTemplateLine[]
+}
+
+model ProductVariant {
+  id            String                  @id @default(uuid())
+  productId     String
+  product       Product                 @relation(fields: [productId], references: [id])
+  attribute     String // e.g. "Brand"
+  value         String // e.g. "Odoo"
+  extraPrice    Float                   @default(0)
+  active        Boolean                 @default(true)
+  lines         SubscriptionLine[]
+  templateLines QuotationTemplateLine[]
+
+  @@index([productId])
+}
+
+// A recurring plan: the price of its product per billing period, plus lifecycle rules.
+model Plan {
+  id            String              @id @default(uuid())
+  name          String
+  productId     String
+  product       Product             @relation(fields: [productId], references: [id])
+  price         Float
+  billingPeriod String // "DAILY", "WEEKLY", "MONTHLY", "YEARLY"
+  minQuantity   Int                 @default(1)
+  startDate     DateTime
+  endDate       DateTime?
+  autoClose     Boolean             @default(false)
+  closable      Boolean             @default(true)
+  pausable      Boolean             @default(true)
+  renewable     Boolean             @default(true)
+  active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  subscriptions Subscription[]
+  templates     QuotationTemplate[]
+}
+
+model QuotationTemplate {
+  id            String                  @id @default(uuid())
+  name          String
+  validityDays  Int
+  planId        String
+  plan          Plan                    @relation(fields: [planId], references: [id])
+  planQuantity  Int                     @default(1)
+  paymentTerms  String                  @default("Net 30")
+  notes         String?
+  active        Boolean                 @default(true)
+  createdAt     DateTime                @default(now())
+  lines         QuotationTemplateLine[]
+  subscriptions Subscription[]
+}
+
+model QuotationTemplateLine {
+  id         String            @id @default(uuid())
+  templateId String
+  template   QuotationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product           @relation(fields: [productId], references: [id])
+  variantId  String?
+  variant    ProductVariant?   @relation(fields: [variantId], references: [id])
+  quantity   Int
 }
 
 model Subscription {
-  id           String             @id @default(uuid())
-  userId       String
-  user         User               @relation(fields: [userId], references: [id])
-  planNumber   String             @unique 
-  billingCycle String    // "DAILY", "WEEKLY", "MONTHLY", "YEARLY"
-  status       String    // "DRAFT", "QUOTATION", "CONFIRMED", "ACTIVE", "CLOSED"
-  startDate    DateTime
-  expiryDate   DateTime
-  paymentTerms String
-  lines        SubscriptionLine[] // Added relation field here
-  invoices     Invoice[]
+  id              String             @id @default(uuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id])
+  planNumber      String             @unique
+  billingCycle    String // "DAILY", "WEEKLY", "MONTHLY", "YEARLY"
+  status          String // "DRAFT", "QUOTATION", "CONFIRMED", "ACTIVE", "PAUSED", "CLOSED"
+  startDate       DateTime
+  expiryDate      DateTime
+  paymentTerms    String
+  createdAt       DateTime           @default(now())
+  planId          String?
+  plan            Plan?              @relation(fields: [planId], references: [id])
+  templateId      String?
+  template        QuotationTemplate? @relation(fields: [templateId], references: [id])
+  validUntil      DateTime? // quotation validity
+  nextInvoiceDate DateTime? // start of the next unbilled period
+  closedAt        DateTime?
+  notes           String?
+  lines           SubscriptionLine[]
+  invoices        Invoice[]
+
+  @@index([status])
+  @@index([userId])
+  @@index([nextInvoiceDate])
 }
 
 model SubscriptionLine {
-  id             String       @id @default(uuid())
+  id             String          @id @default(uuid())
   subscriptionId String
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscription   Subscription    @relation(fields: [subscriptionId], references: [id])
   productId      String
-  product        Product      @relation(fields: [productId], references: [id])
+  product        Product         @relation(fields: [productId], references: [id])
+  variantId      String?
+  variant        ProductVariant? @relation(fields: [variantId], references: [id])
   quantity       Int
   unitPrice      Float
+  // Percentage captured when the line was created; null on legacy lines (engine default applies).
+  taxRate        Float?
+
+  @@index([subscriptionId])
 }
 
 model Invoice {
-  id             String       @id @default(uuid())
+  id             String        @id @default(uuid())
   subscriptionId String
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
-  issueDate      DateTime     @default(now())
-  subTotal       Float        // Renamed from baseAmount
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id])
+  number         String?       @unique // assigned on confirmation
+  issueDate      DateTime      @default(now())
+  dueDate        DateTime? // set on confirmation from payment terms
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  subTotal       Float // Renamed from baseAmount
   taxAmount      Float
-  discountAmount Float        @default(0)
-  grandTotal     Float        // Renamed from totalAmount
-  status         String       // "DRAFT", "CONFIRMED", "PAID"
+  discountAmount Float         @default(0)
+  grandTotal     Float // Renamed from totalAmount
+  status         String // "DRAFT", "CONFIRMED", "PAID", "CANCELLED"
+  confirmedAt    DateTime?
+  sentAt         DateTime?
+  discountRuleId String?
+  discountRule   DiscountRule? @relation(fields: [discountRuleId], references: [id])
+  lines          InvoiceLine[]
   payments       Payment[]
+
+  // One invoice per subscription billing period prevents double billing.
+  @@unique([subscriptionId, periodStart])
+  @@index([status, dueDate])
+  @@index([issueDate])
+}
+
+model InvoiceLine {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int
+  unitPrice   Float
+  taxRate     Float
+  discount    Float   @default(0)
+  taxAmount   Float
+  amount      Float // quantity × unitPrice − discount, before tax
+
+  @@index([invoiceId])
 }
 
 model Payment {
   id        String   @id @default(uuid())
   invoiceId String
   invoice   Invoice  @relation(fields: [invoiceId], references: [id])
-  method    String   // "BANK_TRANSFER", "CARD", "CASH"
+  method    String // "BANK_TRANSFER", "CARD", "CASH", "CHEQUE", "ONLINE"
   amount    Float
   date      DateTime @default(now())
   note      String?
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+  @@index([date])
 }
 
 model DiscountRule {
   id          String    @id @default(uuid())
-  type        String    // "FIXED", "PERCENTAGE"
+  name        String    @default("Discount")
+  type        String // "FIXED", "PERCENTAGE"
   value       Float
   minQuantity Int       @default(0)
   minPurchase Float     @default(0)
@@ -86,8 +213,23 @@ model DiscountRule {
   endDate     DateTime
   usageLimit  Int?
   usedCount   Int       @default(0)
+  // Null applies to the whole subscription; otherwise only to lines of this product.
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id])
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  invoices    Invoice[]
 }
 
+model TaxRule {
+  id        String    @id @default(uuid())
+  name      String
+  rate      Float // percentage, e.g. 10 for 10%
+  isDefault Boolean   @default(false)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
 
 model AuthSession {
   id        String   @id @default(uuid())
@@ -107,4 +249,16 @@ model AuthAttempt {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([userId])
 }

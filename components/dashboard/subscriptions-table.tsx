@@ -32,7 +32,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Subscription, SubscriptionStatus } from "@/lib/dashboard/types";
-import { billingDate, cn, currency } from "@/lib/utils";
+import { billingDate, cn } from "@/lib/utils";
+import { formatMoney as currency } from "@/lib/commerce/format";
 
 const avatarColors: Record<string, string> = {
   violet: "bg-violet-100 text-violet-500",
@@ -42,12 +43,19 @@ const avatarColors: Record<string, string> = {
   green: "bg-emerald-100 text-emerald-600",
 };
 const statusVariants = {
+  Draft: "secondary",
+  Quotation: "default",
+  Confirmed: "warning",
   Active: "success",
-  Trial: "default",
-  Pending: "warning",
-  Overdue: "destructive",
-  Canceled: "secondary",
+  Paused: "warning",
+  Closed: "secondary",
 } as const;
+const periods: Record<string, string> = {
+  DAILY: "day",
+  WEEKLY: "wk",
+  MONTHLY: "mo",
+  YEARLY: "yr",
+};
 const pageSize = 5;
 
 export function CustomerAvatar({
@@ -102,7 +110,7 @@ export function SubscriptionsTable({
     const results = subscriptions.filter(
       (item) =>
         (status === "all" || item.status === status) &&
-        `${item.customer} ${item.email} ${item.plan} ${item.id}`
+        `${item.customer} ${item.email} ${item.plan} ${item.reference}`
           .toLowerCase()
           .includes(needle),
     );
@@ -134,16 +142,20 @@ export function SubscriptionsTable({
         "Email",
         "Plan",
         "Status",
-        "Next billing date",
-        "Monthly amount (USD)",
+        "Reference",
+        "Next invoice date",
+        "Recurring amount (USD)",
+        "Billing period",
       ],
       ...filtered.map((s) => [
         s.customer,
         s.email,
         s.plan,
         s.status,
-        s.nextBilling,
-        s.amount,
+        s.reference,
+        s.nextBilling ?? "",
+        s.amount.toFixed(2),
+        s.period,
       ]),
     ]
       .map((row) => row.map(cell).join(","))
@@ -153,10 +165,10 @@ export function SubscriptionsTable({
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = "kaelix-pulse-demo-subscriptions.csv";
+    link.download = "kaelix-pulse-subscriptions.csv";
     link.click();
     URL.revokeObjectURL(url);
-    setAnnouncement(`Exported ${filtered.length} sample subscriptions.`);
+    setAnnouncement(`Exported ${filtered.length} subscriptions.`);
   }
 
   return (
@@ -178,7 +190,7 @@ export function SubscriptionsTable({
             </Link>
           ) : (
             <span className="text-[10px] text-muted-foreground">
-              Sample customer records
+              Latest 100 subscriptions
             </span>
           )}
         </div>
@@ -247,8 +259,8 @@ export function SubscriptionsTable({
         <div className="relative overflow-x-auto" aria-busy={loading}>
           <table className="w-full min-w-[670px] text-left text-[11px]">
             <caption className="sr-only">
-              Sample subscriptions with customer, plan, status, next billing
-              date, and monthly amount.
+              Recent subscriptions with customer, plan, status, next invoice
+              date, and recurring amount.
             </caption>
             <thead className="border-y bg-[#fafafe] text-[10px] text-muted-foreground">
               <tr>
@@ -273,7 +285,7 @@ export function SubscriptionsTable({
                   Status
                 </th>
                 <th scope="col" className="px-3 py-3 font-medium">
-                  Next billing date
+                  Next invoice
                 </th>
                 <th scope="col" className="px-3 py-3 font-medium">
                   Amount
@@ -341,15 +353,13 @@ export function SubscriptionsTable({
                       <StatusBadge status={s.status} />
                     </td>
                     <td className="px-3 py-3.5 text-[#83818d]">
-                      {s.status === "Canceled"
-                        ? "—"
-                        : billingDate(s.nextBilling)}
+                      {s.nextBilling ? billingDate(s.nextBilling) : "—"}
                     </td>
                     <td className="px-3 py-3.5 font-medium">
                       {currency(s.amount)}
                       <span className="text-[9px] font-normal text-muted-foreground">
                         {" "}
-                        /mo
+                        /{periods[s.period] ?? "period"}
                       </span>
                     </td>
                     <td className="pr-4">
@@ -378,7 +388,7 @@ export function SubscriptionsTable({
                     <p className="mt-1 text-xs text-muted-foreground">
                       {subscriptions.length
                         ? "Try another search or change your status filter."
-                        : "Add your first demo subscription to get started."}
+                        : "Create your first subscription to see it here."}
                     </p>
                     {(query || status !== "all") && (
                       <Button
@@ -471,7 +481,7 @@ export function SubscriptionsTable({
             Subscription details
           </DialogTitle>
           <DialogDescription className="mt-1 text-xs text-muted-foreground">
-            Sample subscription · {selected?.id}
+            {selected?.reference}
           </DialogDescription>
           {selected && (
             <>
@@ -496,20 +506,27 @@ export function SubscriptionsTable({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Next billing date</dt>
+                  <dt className="text-muted-foreground">Next invoice</dt>
                   <dd className="mt-2 font-medium">
-                    {selected.status === "Canceled"
-                      ? "Not scheduled"
-                      : billingDate(selected.nextBilling)}
+                    {selected.nextBilling
+                      ? billingDate(selected.nextBilling)
+                      : "Not scheduled"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Monthly amount</dt>
+                  <dt className="text-muted-foreground">Recurring amount</dt>
                   <dd className="mt-2 font-medium">
-                    {currency(selected.amount)}
+                    {currency(selected.amount)} /
+                    {periods[selected.period] ?? "period"}
                   </dd>
                 </div>
               </dl>
+              <Button asChild className="mt-6 w-full">
+                <Link href={`/subscriptions/${selected.id}`}>
+                  Open subscription
+                  <ArrowUpRight />
+                </Link>
+              </Button>
             </>
           )}
         </DialogContent>

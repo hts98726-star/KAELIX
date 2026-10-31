@@ -5,7 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowUpRight,
+  BarChart3,
   Bell,
+  Layers,
+  SlidersHorizontal,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -52,10 +55,15 @@ const operatorNavigation = [
   { label: "Invoices", href: "/invoices", icon: ReceiptText },
   { label: "Customers", href: "/customers", icon: Users },
   { label: "Products", href: "/products", icon: Package },
+  { label: "Plans", href: "/plans", icon: Layers },
   { label: "Checkout", href: "/checkout", icon: ShoppingBag },
+  { label: "Reports", href: "/reports", icon: BarChart3 },
+  { label: "Configuration", href: "/configuration", icon: SlidersHorizontal },
   { label: "Create account", href: "/signup", icon: UserPlus },
   { label: "Settings", href: "/settings", icon: Settings2 },
 ];
+// Administrator-only destinations; the pages enforce this on the server too.
+const adminOnly = ["Dashboard", "Reports", "Configuration", "Settings"];
 
 export function AppShell({
   children,
@@ -79,7 +87,7 @@ export function AppShell({
         ? [
             { label: "Staff Workspace", href: "/staff", icon: LayoutDashboard },
             ...operatorNavigation.filter(
-              (item) => !["Dashboard", "Settings"].includes(item.label),
+              (item) => !adminOnly.includes(item.label),
             ),
           ]
         : operatorNavigation;

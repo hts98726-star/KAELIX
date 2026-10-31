@@ -11,7 +11,8 @@
     "db:generate": "prisma generate",
     "db:setup": "node scripts/setup-database.mjs",
     "auth:setup": "node scripts/setup-auth.mjs",
-    "auth:provision": "node scripts/provision-user.mjs"
+    "auth:provision": "node scripts/provision-user.mjs",
+    "db:seed-demo": "node scripts/seed-demo.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

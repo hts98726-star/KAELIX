@@ -6,8 +6,13 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { calculateTotalPricing } from "@/lib/pricing";
-import { generateInvoices } from "@/lib/billing";
+import {
+  createPeriodInvoice,
+  defaultTaxRate,
+  taxRateFor,
+  unitPriceFor,
+} from "@/lib/commerce/engine";
+import { addPeriod } from "@/lib/commerce/rules";
 import type { CartItem } from "@/lib/commerce/types";
 
 const checkoutSchema = z.object({
@@ -22,8 +27,6 @@ const checkoutSchema = z.object({
     .min(1)
     .max(50),
 });
-const money = (value: number) =>
-  Math.round((value + Number.EPSILON) * 100) / 100;
 
 // Operators may create subscriptions for customers; public customer accounts cannot invoke this operation.
 export async function processCheckout(userId: string, cartItems: CartItem[]) {
@@ -56,40 +59,25 @@ export async function processCheckout(userId: string, cartItems: CartItem[]) {
       });
       if (!customer) throw new Error("Customer not found");
       const products = await tx.product.findMany({
-        where: { id: { in: ids } },
+        where: { id: { in: ids }, active: true },
+        include: { taxRule: { select: { rate: true, active: true } } },
       });
       if (products.length !== ids.length)
         throw new Error("A product is no longer available");
+      const fallbackTax = await defaultTaxRate(tx);
       const lines = parsed.data.cartItems.map((item) => {
         const product = products.find((entry) => entry.id === item.productId)!;
-        const unitPrice = money(
-          calculateTotalPricing(
-            product.basePrice,
-            product.variantName
-              ? [
-                  {
-                    id: product.id,
-                    name: product.variantName,
-                    markupPrice: product.markupPrice,
-                  },
-                ]
-              : [],
-          ),
-        );
+        const unitPrice = unitPriceFor(product);
         if (!Number.isFinite(unitPrice) || unitPrice < 0)
           throw new Error("Invalid product price");
-        return { productId: product.id, quantity: item.quantity, unitPrice };
+        return {
+          productId: product.id,
+          quantity: item.quantity,
+          unitPrice,
+          taxRate: taxRateFor(product, fallbackTax),
+        };
       });
-      const [invoice] = generateInvoices([
-        { id: "pending", userId: customer.id, lines },
-      ]);
       const startDate = new Date();
-      const expiryDate = new Date(startDate);
-      expiryDate.setUTCMonth(expiryDate.getUTCMonth() + 1, 1);
-      const lastDay = new Date(
-        Date.UTC(expiryDate.getUTCFullYear(), expiryDate.getUTCMonth() + 1, 0),
-      ).getUTCDate();
-      expiryDate.setUTCDate(Math.min(startDate.getUTCDate(), lastDay));
       const newSub = await tx.subscription.create({
         data: {
           userId: customer.id,
@@ -97,25 +85,19 @@ export async function processCheckout(userId: string, cartItems: CartItem[]) {
           billingCycle: "MONTHLY",
           status: "ACTIVE",
           startDate,
-          expiryDate,
+          // A one-year contract, billed monthly; renewal extends it.
+          expiryDate: addPeriod(startDate, "YEARLY"),
+          nextInvoiceDate: addPeriod(startDate, "MONTHLY"),
           paymentTerms: "Due on Receipt",
           lines: { create: lines },
         },
       });
-      const newInvoice = await tx.invoice.create({
-        data: {
-          subscriptionId: newSub.id,
-          subTotal: money(invoice.subTotal),
-          taxAmount: money(invoice.taxTotal),
-          discountAmount: money(invoice.discountApplied),
-          grandTotal: money(
-            money(invoice.subTotal) -
-              money(invoice.discountApplied) +
-              money(invoice.taxTotal),
-          ),
-          status: "DRAFT",
-        },
-      });
+      const newInvoice = await createPeriodInvoice(
+        tx,
+        newSub.id,
+        startDate,
+        startDate,
+      );
       return { newSub, newInvoice };
     });
     for (const path of [
@@ -123,6 +105,7 @@ export async function processCheckout(userId: string, cartItems: CartItem[]) {
       "/subscriptions",
       "/invoices",
       "/customers",
+      "/admin",
     ])
       revalidatePath(path);
     return {

@@ -11,14 +11,14 @@ export type SubscriptionLine = {
 
 export type Subscription = {
   id: string;
-  customerId: string;
+  userId: string; // Updated from customerId to match Ann's User model
   lines: SubscriptionLine[];
   discount?: Discount;
 };
 
 export type Invoice = {
   subscriptionId: string;
-  customerId: string;
+  userId: string; // Updated from customerId to match Ann's User model
   subTotal: number;
   discountApplied: number;
   taxTotal: number;
@@ -55,7 +55,7 @@ export function generateInvoices(subscriptions: Subscription[], taxRate: number 
 
     return {
       subscriptionId: sub.id,
-      customerId: sub.customerId,
+      userId: sub.userId, // Updated from customerId
       subTotal,
       discountApplied,
       taxTotal,

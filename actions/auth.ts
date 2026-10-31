@@ -22,28 +22,28 @@ export async function registerUser(formData: FormData) {
   }
 
   const { email, password } = validatedFields.data;
-  
+
   try {
     // 3. Hash the password before saving (Faheem's requirement)
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // 4. Save to Database
-    const newUser = await prisma.user.create({
+    await prisma.user.create({
       data: {
-        email: email,
+        email,
         passwordHash: hashedPassword,
         role: "CUSTOMER",
-      }
+      },
     });
-    
-    return { 
+
+    return {
       message: "Account secured and saved to the database!",
-      success: true 
+      success: true,
     };
-  } catch (error) {
-    return { 
+  } catch {
+    return {
       message: "Database error. This email might already exist.",
-      success: false 
+      success: false,
     };
   }
 }

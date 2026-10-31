@@ -11,33 +11,45 @@ model User {
   id           String         @id @default(uuid())
   email        String         @unique
   passwordHash String
-  role         String         
+  role         String         // "ADMIN", "STAFF", "CUSTOMER"
   createdAt    DateTime       @default(now())
   subscriptions Subscription[]
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  name        String
-  type        String
-  basePrice   Float
-  costPrice   Float
-  notes       String?
-  variantName String?  
-  markupPrice Float    @default(0) 
+  id                String             @id @default(uuid())
+  name              String
+  type              String
+  basePrice         Float
+  costPrice         Float
+  notes             String?
+  variantName       String?  
+  markupPrice       Float              @default(0) 
+  subscriptionLines SubscriptionLine[] // Added relation field here
 }
 
 model Subscription {
-  id           String    @id @default(uuid())
+  id           String             @id @default(uuid())
   userId       String
-  user         User      @relation(fields: [userId], references: [id])
-  planNumber   String    @unique 
-  billingCycle String    
-  status       String    
+  user         User               @relation(fields: [userId], references: [id])
+  planNumber   String             @unique 
+  billingCycle String    // "DAILY", "WEEKLY", "MONTHLY", "YEARLY"
+  status       String    // "DRAFT", "QUOTATION", "CONFIRMED", "ACTIVE", "CLOSED"
   startDate    DateTime
   expiryDate   DateTime
   paymentTerms String
+  lines        SubscriptionLine[] // Added relation field here
   invoices     Invoice[]
+}
+
+model SubscriptionLine {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id])
+  quantity       Int
+  unitPrice      Float
 }
 
 model Invoice {
@@ -45,11 +57,11 @@ model Invoice {
   subscriptionId String
   subscription   Subscription @relation(fields: [subscriptionId], references: [id])
   issueDate      DateTime     @default(now())
-  baseAmount     Float
+  subTotal       Float        // Renamed from baseAmount
   taxAmount      Float
   discountAmount Float        @default(0)
-  totalAmount    Float
-  status         String       
+  grandTotal     Float        // Renamed from totalAmount
+  status         String       // "DRAFT", "CONFIRMED", "PAID"
   payments       Payment[]
 }
 
@@ -57,7 +69,7 @@ model Payment {
   id        String   @id @default(uuid())
   invoiceId String
   invoice   Invoice  @relation(fields: [invoiceId], references: [id])
-  method    String   
+  method    String   // "BANK_TRANSFER", "CARD", "CASH"
   amount    Float
   date      DateTime @default(now())
   note      String?
@@ -65,7 +77,7 @@ model Payment {
 
 model DiscountRule {
   id          String    @id @default(uuid())
-  type        String    
+  type        String    // "FIXED", "PERCENTAGE"
   value       Float
   minQuantity Int       @default(0)
   minPurchase Float     @default(0)

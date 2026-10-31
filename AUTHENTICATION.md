@@ -4,7 +4,7 @@
 
 The old `app/page.tsx` unconditionally rendered the demo administrator dashboard, and the root layout wrapped every page in the administrator sidebar. Signup only inserted a User row; there was no session verification or authorization in the page loaders or mutation actions.
 
-The root layout is now public. `/` renders the branded welcome experience for guests and redirects authenticated users by their current database role. `/login` verifies credentials; `/signup` creates CUSTOMER accounts and links to login with a success message. The original dashboard is preserved at `/admin`, including its filtering, sorting, pagination, CSV export, charts, and temporary demo quick-add form.
+The root layout is now public. `/` renders the branded welcome experience for guests and redirects authenticated users by their current database role. `/login` verifies credentials; `/signup` creates CUSTOMER accounts and links to login with a success message. The original dashboard is preserved at `/admin`, including its filtering, sorting, pagination, CSV export, and charts, now backed by live data.
 
 ## Role permissions
 

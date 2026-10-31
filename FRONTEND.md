@@ -6,7 +6,7 @@ The app uses Next.js App Router, TypeScript, Tailwind CSS 4, Radix primitives, a
 
 - `/`: guest welcome page, or redirect to the authenticated role home.
 - `/login`: email/password sign-in with server-side session establishment.
-- `/admin`: original demo dashboard (ADMIN only). Charts, metrics, recent subscriptions, CSV export, and its quick-add dialog use synthetic data from `lib/dashboard/mock-data.ts`. Quick-added records reset on navigation or refresh and are never billed.
+- `/admin`: live administrator dashboard (ADMIN only). Metrics, revenue chart, plan breakdown, and recent subscriptions come from authorized Prisma queries in `lib/dashboard/data.ts`; search, filter, sort, pagination, and CSV export are preserved. "New subscription" opens the real builder at `/subscriptions/new`.
 - `/signup`: standalone account creation UI using `registerUser` from `actions/auth.ts`. Includes confirmation, password guidance, field errors, pending state, duplicate-email handling, and success feedback. It creates a CUSTOMER account and links to login with a success message.
 - `/products`: catalog of persisted monthly services and a product creation form backed by `actions/products.ts`.
 - `/checkout`: database customer/product selectors, quantities, variant-inclusive prices, estimated totals, pending/error states, and a receipt using the actual saved subscription/invoice returned by `processCheckout`.

@@ -2,15 +2,16 @@
 
 import { userSignupSchema } from "../lib/validations";
 import { prisma } from "../lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function registerUser(formData: FormData) {
-  // 1. Extract raw data from Hari's frontend form
+  // 1. Extract raw data from frontend form
   const rawData = {
     email: formData.get("email") as string,
     password: formData.get("password") as string,
   };
 
-  // 2. Validate against your strict Zod rules
+  // 2. Validate against Zod rules
   const validatedFields = userSignupSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
@@ -20,14 +21,17 @@ export async function registerUser(formData: FormData) {
     };
   }
 
-  // 3. Save to Ann's Database
   const { email, password } = validatedFields.data;
   
   try {
+    // 3. Hash the password before saving (Faheem's requirement)
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 4. Save to Database
     const newUser = await prisma.user.create({
       data: {
         email: email,
-        passwordHash: password, // Note: For production we would hash this with bcrypt, but this works for the hackathon MVP
+        passwordHash: hashedPassword,
         role: "CUSTOMER",
       }
     });

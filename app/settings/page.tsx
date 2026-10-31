@@ -8,7 +8,7 @@ export default function SettingsPage() {
   return (
     <div className="page-enter max-w-4xl space-y-6">
       <div>
-        <Badge className="mb-3">Demo workspace</Badge>
+        <Badge className="mb-3">Development workspace</Badge>
         <h1 className="text-3xl font-semibold tracking-tight">
           Make yourself at home<span className="text-primary">.</span>
         </h1>
@@ -33,7 +33,7 @@ export default function SettingsPage() {
           <div>
             <dt className="text-muted-foreground">Environment</dt>
             <dd className="mt-2">
-              <Badge>Frontend prototype</Badge>
+              <Badge>Connected workspace</Badge>
             </dd>
           </div>
           <div>
@@ -48,26 +48,30 @@ export default function SettingsPage() {
           Integration overview
         </h2>
         <p className="mt-2 text-xs leading-6 text-muted-foreground">
-          UI previews are ready. Your team will connect the services below.
+          Account creation and subscription checkout are connected. Session
+          login and payment collection are still pending.
         </p>
         <div className="mt-5 divide-y">
           {[
             {
-              label: "Odoo & billing",
-              description: "Invoices, payments, and billing engine",
+              label: "Subscription billing",
+              description: "Checkout, subscription records, and draft invoices",
+              status: "Connected",
               icon: Blocks,
             },
             {
-              label: "Authentication",
-              description: "Identity, sessions, and access",
+              label: "Session authentication",
+              description: "Login and workspace access control",
+              status: "Pending",
               icon: ShieldCheck,
             },
             {
-              label: "Backend API",
-              description: "Subscriptions, customers, and analytics",
+              label: "Customer registration",
+              description: "Validated accounts with hashed passwords",
+              status: "Connected",
               icon: Cable,
             },
-          ].map(({ label, description, icon: Icon }) => (
+          ].map(({ label, description, status, icon: Icon }) => (
             <div key={label} className="flex flex-wrap items-center gap-3 py-4">
               <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                 <Icon className="size-4" />
@@ -78,7 +82,9 @@ export default function SettingsPage() {
                   {description}
                 </p>
               </div>
-              <Badge variant="secondary">Not connected</Badge>
+              <Badge variant={status === "Connected" ? "success" : "secondary"}>
+                {status}
+              </Badge>
             </div>
           ))}
         </div>

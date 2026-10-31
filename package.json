@@ -7,7 +7,9 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:generate": "prisma generate",
+    "db:setup": "node scripts/setup-database.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

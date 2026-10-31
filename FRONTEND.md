@@ -1,50 +1,37 @@
-# KAELIX PULSE frontend prototype
+# KAELIX PULSE frontend integration
 
-Run `npm run dev` and open http://localhost:3000. Run `npm run build` for a production build and `npm run lint` for ESLint.
+The app uses Next.js App Router, TypeScript, Tailwind CSS 4, Radix primitives, and Lucide icons. The dashboard design is preserved while registration, the catalog, checkout, and workspace records are connected to Prisma.
 
-## Scope
+## Routes
 
-The dashboard uses Next.js App Router, TypeScript, Tailwind CSS 4, Lucide icons, and locally owned shadcn/ui components backed by Radix primitives. It is integrated into the existing KAELIX app while preserving the billing engine (`lib/billing.ts`), variant pricing (`lib/pricing.ts`), signup validation (`lib/validations.ts`), and Prisma schema (`prisma/schema.prisma`) from `main`. The dashboard still uses demo data; it does not call these modules or persist records. Authentication, API routes, and payment processing are not connected.
+- `/`: original demo dashboard. Charts, metrics, recent subscriptions, CSV export, and its quick-add dialog use synthetic data from `lib/dashboard/mock-data.ts`. Quick-added records reset on navigation or refresh and are never billed.
+- `/signup`: standalone account creation UI using `registerUser` from `actions/auth.ts`. Includes confirmation, password guidance, field errors, pending state, duplicate-email handling, and success feedback. It creates an account, not a login session.
+- `/products`: catalog of persisted monthly services and a product creation form backed by `actions/products.ts`.
+- `/checkout`: database customer/product selectors, quantities, variant-inclusive prices, estimated totals, pending/error states, and a receipt using the actual saved subscription/invoice returned by `processCheckout`.
+- `/customers`, `/subscriptions`, `/invoices`: request-time database views with loading, empty, and unavailable states. Only non-sensitive customer fields are selected.
+- `/settings`: integration status, including pending session authentication.
 
-## Data and integration
+## Action integration
 
-- `lib/dashboard/mock-data.ts` explicitly contains synthetic demo data. The 12-row recent-subscription sample is separate from the illustrative aggregate metrics and plan totals. Figures represent October 2026; charts cover May–October 2026. All amounts use USD.
-- `lib/dashboard/types.ts` defines serializable UI contracts: `DashboardData`, `Subscription`, `DashboardMetric`, `RevenuePoint`, and `PlanBreakdown`.
-- `app/page.tsx` is the server-rendered entry point. Replace `mockDashboardData` with your team's API data and pass the response to `<Dashboard data={data} />`.
-- `SubscriptionsTable` takes `subscriptions`, `loading`, `error`, and `onRetry` props. It includes skeleton, empty-data, no-results, and retry states. Search and status filters combine, pagination clamps to available records, and CSV export includes all filtered records across pages.
-- `app/loading.tsx` provides route loading skeletons; `app/error.tsx` provides a recoverable error boundary.
-- `SubscriptionForm` calls `onCreate` with a temporary demo record. It performs no network requests. Records remain in the current view only and reset on navigation or refresh. Wire this callback to your team's create endpoint when available. Aggregate demo metrics remain independent.
-- Sidebar routes `/subscriptions`, `/customers`, `/invoices`, and `/settings` are frontend previews. Invoice references are synthetic display examples; settings integrations are labeled as unconnected.
+`registerUser(formData)` accepts `email` and `password`. It returns `success`, `message`, and optional field `errors`. Emails are normalized to lowercase. Passwords are validated with the shared Zod schema, checked against bcrypt's 72-byte input limit, and hashed before persistence.
 
-## Components
+`processCheckout(userId, cartItems)` accepts a customer UUID and `{ productId, quantity }[]`. Prices and variant markups are loaded from the catalog server-side; client-provided prices are ignored. Quantities must be integers from 1–999, with 1–50 distinct products. Subscription lines and the invoice are saved atomically. Totals are rounded to cents and returned with actual database references. No payment collection occurs.
 
-- `components/dashboard/app-shell.tsx`: desktop collapsible sidebar, accessible mobile drawer, navigation search, notifications, and help.
-- `components/dashboard/dashboard.tsx`: dashboard composition and local demo state.
-- `components/dashboard/metric-cards.tsx`, `revenue-chart.tsx`, `plan-breakdown.tsx`: presentation components driven by typed props. Charts use SVG and do not require a chart runtime.
-- `components/dashboard/subscriptions-table.tsx`: search, filters, sort, pagination, export, and subscription details.
-- `components/ui/*`: reusable shadcn/ui primitives; `components.json` configures aliases and styling for future component additions.
-- `app/globals.css`: Tailwind theme tokens and reduced-motion-aware animations.
+`createProduct(formData)` creates a monthly service with a name, base price, optional variant name/markup, and optional description. Prices use at most two decimal places. Cost defaults to zero; pricing and full product administration can be extended by the team.
 
-## Browser verification
+These are internal workspace operations. The backend does not yet supply sessions or role enforcement. Add those checks inside every workspace action and data loader before public deployment; selecting a customer is not authorization.
 
-Run `npm run build` first, then `npm run test:e2e` to run the Playwright UI suite against a production server on port 3100. The suite uses the installed Microsoft Edge browser; no browser download is required. Tests cover filtering, empty states, pagination, details, temporary demo creation, export, navigation, and mobile layout. Screenshots are written to `artifacts/`.
+## Components and data
 
-## File inventory
+- `components/commerce/*`: signup, checkout, catalog, and workspace presentation.
+- `lib/commerce/data.ts`: Prisma queries that never select password hashes.
+- `lib/commerce/types.ts`: serializable client contracts.
+- `lib/commerce/format.ts`: cent-accurate currency and UTC date display.
+- `lib/prisma.ts`: development singleton; optional runtime `DATABASE_URL` override supports isolated tests.
+- `components/dashboard/*`: original demo analytics and table interactions.
 
-Modified existing files:
+## Verification
 
-- `app/page.tsx`: dashboard entry point and fixture integration.
-- `app/layout.tsx`: shared app shell, metadata, and brand icon.
-- `app/globals.css`: theme tokens, base styles, chart animations, and reduced-motion support.
-- `package.json`, `package-lock.json`: UI dependencies, Playwright, Prettier, and the browser test script.
+Run `npm install`, `npx prisma generate`, and `npm run db:setup` for a local database. Run `npm run lint`, `npm run build`, then `npm run test:e2e`.
 
-Created files:
-
-- `components/dashboard/`: `app-shell.tsx`, `brand.tsx`, `dashboard.tsx`, `metric-cards.tsx`, `revenue-chart.tsx`, `plan-breakdown.tsx`, `subscriptions-table.tsx`, `subscription-form.tsx`, and `subscription-workspace.tsx`.
-- `components/ui/`: `badge.tsx`, `button.tsx`, `card.tsx`, `dialog.tsx`, `dropdown-menu.tsx`, `input.tsx`, `select.tsx`, and `skeleton.tsx`.
-- `lib/dashboard/`: `types.ts` and `mock-data.ts`; `lib/utils.ts` provides class merging and date/currency presentation.
-- `app/loading.tsx`, `app/error.tsx`, and frontend preview pages under `app/subscriptions/`, `app/customers/`, `app/invoices/`, and `app/settings/`.
-- `components.json`, `public/pulse.svg`, `playwright.config.ts`, `tests/dashboard.spec.ts`, and this document.
-- `artifacts/dashboard-desktop.png` and `artifacts/dashboard-mobile.png`: browser screenshots generated by the UI tests. `test-results/` contains generated Playwright output. These output directories are ignored by Git.
-
-Run the checks above after changing the integration. Keep the existing `zod` dependency and backend modules when updating frontend dependencies.
+The browser suite uses an isolated temporary SQLite database and Microsoft Edge. It verifies database persistence, hashed passwords, duplicate email errors, server-side catalog pricing, tampered-quantity rejection, product creation, demo interactions, and mobile layout. Generated images, traces, and local database files are ignored by Git.

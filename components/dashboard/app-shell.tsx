@@ -11,6 +11,9 @@ import {
   ChevronRight,
   CircleHelp,
   CreditCard,
+  ShoppingBag,
+  Package,
+  UserPlus,
   LayoutDashboard,
   Menu,
   PanelLeftClose,
@@ -46,6 +49,9 @@ const navigation = [
   { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
   { label: "Invoices", href: "/invoices", icon: ReceiptText },
   { label: "Customers", href: "/customers", icon: Users },
+  { label: "Products", href: "/products", icon: Package },
+  { label: "Checkout", href: "/checkout", icon: ShoppingBag },
+  { label: "Create account", href: "/signup", icon: UserPlus },
   { label: "Settings", href: "/settings", icon: Settings2 },
 ];
 
@@ -59,10 +65,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const current =
     navigation.find((item) => item.href === pathname)?.label ?? "Workspace";
 
+  if (pathname === "/signup") return <>{children}</>;
+
   function sidebar(isMobile = false) {
     const small = collapsed && !isMobile;
     return (
-      <div className="flex h-full flex-col bg-white">
+      <div className="flex h-full flex-col overflow-y-auto bg-white">
         <div
           className={cn(
             "flex h-[83px] shrink-0 items-center px-6",
@@ -121,11 +129,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {!small && (
                 <>
                   <span>{label}</span>
-                  {label === "Subscriptions" && (
-                    <span className="ml-auto rounded-md bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground">
-                      12
-                    </span>
-                  )}
                 </>
               )}
               {pathname === href && !small && (
@@ -285,8 +288,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   Workspace updates
                 </DropdownMenuLabel>
                 <p className="px-3 py-3 text-xs leading-6 text-muted-foreground">
-                  Welcome to KAELIX PULSE. You’re exploring a frontend prototype
-                  with sample data.
+                  Welcome to KAELIX PULSE. Signup and checkout save to your
+                  workspace. Dashboard charts remain sample data.
                 </p>
                 <div className="border-t px-3 pt-2 pb-1 text-[10px] text-muted-foreground">
                   Demo notification · October 31, 2026
@@ -334,8 +337,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span>© 2026 KAELIX PULSE. Built to keep you in rhythm.</span>
           <span className="flex items-center gap-2">
             <span className="size-1.5 rounded-full bg-primary" />
-            Frontend prototype <span className="text-[#ceccd6]">/</span> Odoo ×
-            Make-A-Ton
+            {pathname === "/" ? "Demo analytics" : "Connected workspace"}{" "}
+            <span className="text-[#ceccd6]">/</span> Odoo × Make-A-Ton
           </span>
         </footer>
       </div>
@@ -394,9 +397,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </DialogTitle>
           <DialogDescription className="mt-3 text-sm leading-7 text-muted-foreground">
             Explore your overview, search and filter subscriptions, or export a
-            CSV. The new subscription form creates a temporary demo record in
-            the current view. All figures are sample data; backend APIs will be
-            connected by your team.
+            CSV from the demo dashboard. Create an account, then open Checkout
+            to save a real subscription and draft invoice. Customers,
+            subscriptions, and invoices show saved workspace records. Dashboard
+            analytics and its quick-add form still use temporary sample data.
           </DialogDescription>
           <Button className="mt-5" onClick={() => setHelpOpen(false)}>
             Let’s get started <ArrowUpRight />

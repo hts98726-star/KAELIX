@@ -7,6 +7,11 @@ import { randomBytes } from "node:crypto";
 // Propagate one fresh, isolated database to setup, browser server, and test workers.
 process.env.KAELIX_TEST_DATABASE_URL ??= `file:${join(mkdtempSync(join(tmpdir(), "kaelix-e2e-")), "workspace.db").replaceAll("\\", "/")}`;
 
+// The file email transport writes here; tests read reset links from it. No real email is sent.
+process.env.KAELIX_TEST_OUTBOX ??= mkdtempSync(
+  join(tmpdir(), "kaelix-outbox-"),
+);
+
 process.env.KAELIX_TEST_SESSION_SECRET ??=
   randomBytes(48).toString("base64url");
 
@@ -35,6 +40,9 @@ export default defineConfig({
     env: {
       DATABASE_URL: process.env.KAELIX_TEST_DATABASE_URL,
       SESSION_SECRET: process.env.KAELIX_TEST_SESSION_SECRET,
+      EMAIL_TRANSPORT: "file",
+      EMAIL_OUTBOX_DIR: process.env.KAELIX_TEST_OUTBOX,
+      APP_URL: "http://localhost:3100",
     },
   },
 });

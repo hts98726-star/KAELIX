@@ -101,7 +101,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
             <ActionForm action={recordPayment} submitLabel="Record payment" ariaLabel="Record payment">
               <input type="hidden" name="invoiceId" value={invoice.id} />
               <Field label="Amount ($)" htmlFor="pay-amount">
-                <Input id="pay-amount" name="amount" type="number" min={0.01} max={balance} step="0.01" defaultValue={balance.toFixed(2)} required />
+                <Input id="pay-amount" name="amount" type="number" min={0.01} step="0.01" defaultValue={balance.toFixed(2)} required />
               </Field>
               <Field label="Method" htmlFor="pay-method">
                 <select id="pay-method" name="method" className={nativeSelect} defaultValue="BANK_TRANSFER">

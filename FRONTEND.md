@@ -4,12 +4,16 @@ The app uses Next.js App Router, TypeScript, Tailwind CSS 4, Radix primitives, a
 
 ## Routes
 
-- `/`: original demo dashboard. Charts, metrics, recent subscriptions, CSV export, and its quick-add dialog use synthetic data from `lib/dashboard/mock-data.ts`. Quick-added records reset on navigation or refresh and are never billed.
-- `/signup`: standalone account creation UI using `registerUser` from `actions/auth.ts`. Includes confirmation, password guidance, field errors, pending state, duplicate-email handling, and success feedback. It creates an account, not a login session.
+- `/`: guest welcome page, or redirect to the authenticated role home.
+- `/login`: email/password sign-in with server-side session establishment.
+- `/admin`: original demo dashboard (ADMIN only). Charts, metrics, recent subscriptions, CSV export, and its quick-add dialog use synthetic data from `lib/dashboard/mock-data.ts`. Quick-added records reset on navigation or refresh and are never billed.
+- `/signup`: standalone account creation UI using `registerUser` from `actions/auth.ts`. Includes confirmation, password guidance, field errors, pending state, duplicate-email handling, and success feedback. It creates a CUSTOMER account and links to login with a success message.
 - `/products`: catalog of persisted monthly services and a product creation form backed by `actions/products.ts`.
 - `/checkout`: database customer/product selectors, quantities, variant-inclusive prices, estimated totals, pending/error states, and a receipt using the actual saved subscription/invoice returned by `processCheckout`.
 - `/customers`, `/subscriptions`, `/invoices`: request-time database views with loading, empty, and unavailable states. Only non-sensitive customer fields are selected.
-- `/settings`: integration status, including pending session authentication.
+- `/settings`: administrator-only integration status.
+- `/staff`: restricted staff operations.
+- `/portal`, `/portal/subscriptions`, `/portal/invoices`: authenticated CUSTOMER views scoped to session ownership.
 
 ## Action integration
 
@@ -19,7 +23,7 @@ The app uses Next.js App Router, TypeScript, Tailwind CSS 4, Radix primitives, a
 
 `createProduct(formData)` creates a monthly service with a name, base price, optional variant name/markup, and optional description. Prices use at most two decimal places. Cost defaults to zero; pricing and full product administration can be extended by the team.
 
-These are internal workspace operations. The backend does not yet supply sessions or role enforcement. Add those checks inside every workspace action and data loader before public deployment; selecting a customer is not authorization.
+Every business action and data loader enforces server-side permissions. Product creation requires ADMIN; checkout allows ADMIN and STAFF. Customer data access is scoped to the authenticated user. Read AUTHENTICATION.md for the complete permission matrix and controlled privileged account provisioning.
 
 ## Components and data
 
@@ -32,6 +36,6 @@ These are internal workspace operations. The backend does not yet supply session
 
 ## Verification
 
-Run `npm install`, `npx prisma generate`, and `npm run db:setup` for a local database. Run `npm run lint`, `npm run build`, then `npm run test:e2e`.
+Run `npm install`, `npm run auth:setup`, `npx prisma generate`, and `npm run db:setup` for a local database. Run `npm run lint`, `npm run build`, then `npm run test:e2e`.
 
 The browser suite uses an isolated temporary SQLite database and Microsoft Edge. It verifies database persistence, hashed passwords, duplicate email errors, server-side catalog pricing, tampered-quantity rejection, product creation, demo interactions, and mobile layout. Generated images, traces, and local database files are ignored by Git.

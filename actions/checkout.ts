@@ -1,5 +1,7 @@
 "use server";
 
+import { authorize, AuthError } from "@/lib/auth/authorize";
+
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -23,9 +25,15 @@ const checkoutSchema = z.object({
 const money = (value: number) =>
   Math.round((value + Number.EPSILON) * 100) / 100;
 
-// Internal workspace operation. Add a session/role check before public deployment.
-// Client prices and customer selections are never treated as authorization.
+// Operators may create subscriptions for customers; public customer accounts cannot invoke this operation.
 export async function processCheckout(userId: string, cartItems: CartItem[]) {
+  try {
+    await authorize(["ADMIN", "STAFF"]);
+  } catch (error) {
+    if (error instanceof AuthError)
+      return { success: false as const, message: error.message };
+    throw error;
+  }
   const parsed = checkoutSchema.safeParse({ userId, cartItems });
   if (!parsed.success)
     return {

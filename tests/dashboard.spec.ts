@@ -1,11 +1,15 @@
 import { expect, test } from "@playwright/test";
+import { signIn } from "./helpers/auth";
+test.beforeEach(async ({ page }) => {
+  await signIn(page, "ADMIN");
+});
 
 test("dashboard renders metrics and filters subscriptions with an empty recovery state", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
+  await page.goto("/admin");
   await expect(
     page.getByRole("heading", { name: "Dashboard overview." }),
   ).toBeVisible();
@@ -35,7 +39,7 @@ test("dashboard renders metrics and filters subscriptions with an empty recovery
 test("pagination, detail dialog, sorting, and filtered CSV export work", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/admin");
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(page.getByText("Natali Craig", { exact: true })).toBeVisible();
   await page
@@ -72,7 +76,7 @@ test("demo subscription creation stays local and route navigation works", async 
     if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method()))
       mutations.push(request.url());
   });
-  await page.goto("/");
+  await page.goto("/admin");
   await page.getByRole("button", { name: "New subscription" }).click();
   await page
     .getByRole("textbox", { name: "Customer name" })
@@ -103,7 +107,7 @@ test("demo subscription creation stays local and route navigation works", async 
 test("chart controls, sidebar collapse, and desktop screenshot", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/admin");
   await page
     .getByRole("combobox", { name: "Revenue chart date range" })
     .click();
@@ -136,7 +140,7 @@ test("mobile navigation traps focus, closes, and content fits the viewport", asy
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/admin");
   await page.getByRole("button", { name: "Open navigation" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();

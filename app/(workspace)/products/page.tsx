@@ -1,3 +1,5 @@
+import { requirePageUser } from "@/lib/auth/authorize";
+import { RoleGate } from "@/components/auth/role-gate";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -11,15 +13,18 @@ import { getProducts } from "@/lib/commerce/data";
 export const metadata: Metadata = { title: "Products" };
 async function ProductData() {
   await connection();
+  const user = await requirePageUser(["ADMIN", "STAFF"]);
   let products;
   try {
     products = await getProducts();
   } catch {
     return <WorkspaceUnavailable />;
   }
-  return <ProductCatalog products={products} />;
+  return (
+    <ProductCatalog products={products} canCreate={user.role === "ADMIN"} />
+  );
 }
-export default function ProductsPage() {
+function ProductsPageContent() {
   return (
     <div className="page-enter space-y-7">
       <WorkspaceHeading
@@ -30,5 +35,13 @@ export default function ProductsPage() {
         <ProductData />
       </Suspense>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <RoleGate roles={["ADMIN", "STAFF"]}>
+      <ProductsPageContent />
+    </RoleGate>
   );
 }

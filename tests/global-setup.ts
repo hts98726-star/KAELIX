@@ -37,6 +37,19 @@ export default async function globalSetup() {
         role: "CUSTOMER",
       },
     });
+    for (const [email, role] of [
+      ["admin@example.test", "ADMIN"],
+      ["staff@example.test", "STAFF"],
+      ["other@example.test", "CUSTOMER"],
+    ]) {
+      await prisma.user.create({
+        data: {
+          email,
+          role,
+          passwordHash: await bcrypt.hash("StrongPass!", 10),
+        },
+      });
+    }
     await prisma.product.createMany({
       data: [
         {
@@ -60,6 +73,40 @@ export default async function globalSetup() {
         },
       ],
     });
+    const product = await prisma.product.findFirstOrThrow({
+      where: { name: "Pulse Starter" },
+    });
+    for (const [email, planNumber] of [
+      ["checkout@example.test", "E2E-OWN-CUSTOMER"],
+      ["other@example.test", "E2E-OTHER-CUSTOMER"],
+    ]) {
+      const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+      await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          planNumber,
+          billingCycle: "MONTHLY",
+          status: "ACTIVE",
+          startDate: new Date(),
+          expiryDate: new Date(Date.now() + 30 * 86400000),
+          paymentTerms: "Due on Receipt",
+          lines: {
+            create: [{ productId: product.id, quantity: 1, unitPrice: 29.25 }],
+          },
+          invoices: {
+            create: [
+              {
+                subTotal: 29.25,
+                taxAmount: 2.93,
+                discountAmount: 0,
+                grandTotal: 32.18,
+                status: "DRAFT",
+              },
+            ],
+          },
+        },
+      });
+    }
   } finally {
     await prisma.$disconnect();
   }

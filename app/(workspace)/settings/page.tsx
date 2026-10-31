@@ -1,10 +1,11 @@
+import { RoleGate } from "@/components/auth/role-gate";
 import type { Metadata } from "next";
 import { Blocks, Building2, Cable, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Settings" };
-export default function SettingsPage() {
+function SettingsPageContent() {
   return (
     <div className="page-enter max-w-4xl space-y-6">
       <div>
@@ -49,7 +50,8 @@ export default function SettingsPage() {
         </h2>
         <p className="mt-2 text-xs leading-6 text-muted-foreground">
           Account creation and subscription checkout are connected. Session
-          login and payment collection are still pending.
+          login and role-based access are active. Payment collection is still
+          pending.
         </p>
         <div className="mt-5 divide-y">
           {[
@@ -62,7 +64,7 @@ export default function SettingsPage() {
             {
               label: "Session authentication",
               description: "Login and workspace access control",
-              status: "Pending",
+              status: "Connected",
               icon: ShieldCheck,
             },
             {
@@ -90,5 +92,13 @@ export default function SettingsPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <RoleGate roles={["ADMIN"]}>
+      <SettingsPageContent />
+    </RoleGate>
   );
 }

@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { lookupUserByEmail } from "@/lib/auth/users";
 import { userSignupSchema } from "@/lib/validations";
 import type { RegistrationResult } from "@/lib/commerce/types";
 
@@ -32,6 +33,12 @@ export async function registerUser(
     };
   }
   try {
+    if ((await lookupUserByEmail(validated.data.email)).exists)
+      return {
+        success: false,
+        message: "An account with this email already exists.",
+        errors: { email: ["This email is already registered."] },
+      };
     await prisma.user.create({
       data: {
         email: validated.data.email,

@@ -14,6 +14,7 @@ model User {
   role         String         // "ADMIN", "STAFF", "CUSTOMER"
   createdAt    DateTime       @default(now())
   subscriptions Subscription[]
+  sessions      AuthSession[]
 }
 
 model Product {
@@ -85,4 +86,25 @@ model DiscountRule {
   endDate     DateTime
   usageLimit  Int?
   usedCount   Int       @default(0)
+}
+
+
+model AuthSession {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthAttempt {
+  key       String   @id
+  attempts  Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }

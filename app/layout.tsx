@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AppShell } from "@/components/dashboard/app-shell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: { default: "Dashboard | KAELIX PULSE", template: "%s | KAELIX PULSE" },
   description:
-    "KAELIX PULSE — your subscriptions, revenue, and customers in rhythm. Admin dashboard frontend prototype.",
+    "KAELIX PULSE — your subscriptions, revenue, and customers in rhythm. Secure subscription management workspace.",
   robots: { index: false, follow: false },
   icons: { icon: "/pulse.svg" },
 };
@@ -27,9 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">
-        <AppShell>{children}</AppShell>
-      </body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

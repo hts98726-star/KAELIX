@@ -83,7 +83,7 @@ export default function SignupPage() {
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
           >
             <ArrowLeft className="size-3.5" />
-            Back to workspace
+            Back to welcome
           </Link>
           <ShieldCheck className="size-4 text-primary" />
         </div>
@@ -105,10 +105,10 @@ export default function SignupPage() {
           <SignupForm />
         </div>
         <Link
-          href="/checkout"
+          href="/login"
           className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground hover:text-primary"
         >
-          Already have an account? Open workspace checkout
+          Already have an account? Log in
           <ArrowUpRight className="size-3" />
         </Link>
       </section>

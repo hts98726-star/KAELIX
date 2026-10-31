@@ -1,5 +1,7 @@
 "use server";
 
+import { authorize, AuthError } from "@/lib/auth/authorize";
+
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -16,8 +18,15 @@ const schema = z.object({
   markupPrice: price,
   notes: z.string().trim().max(500),
 });
-// Internal catalog operation; add workspace role enforcement when sessions are available.
+// Product creation is restricted to administrators.
 export async function createProduct(formData: FormData) {
+  try {
+    await authorize(["ADMIN"]);
+  } catch (error) {
+    if (error instanceof AuthError)
+      return { success: false as const, message: error.message };
+    throw error;
+  }
   const input = schema.safeParse({
     name: formData.get("name"),
     basePrice: formData.get("basePrice"),

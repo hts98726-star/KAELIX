@@ -43,9 +43,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Brand } from "./brand";
 import { cn } from "@/lib/utils";
+import { logoutUser } from "@/actions/session";
+import { roleHome, type SessionUser } from "@/lib/auth/roles";
 
-const navigation = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+const operatorNavigation = [
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
   { label: "Invoices", href: "/invoices", icon: ReceiptText },
   { label: "Customers", href: "/customers", icon: Users },
@@ -55,7 +57,39 @@ const navigation = [
   { label: "Settings", href: "/settings", icon: Settings2 },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  user,
+}: {
+  children: React.ReactNode;
+  user: SessionUser;
+}) {
+  const navigation =
+    user.role === "CUSTOMER"
+      ? [
+          { label: "Customer Portal", href: "/portal", icon: LayoutDashboard },
+          {
+            label: "My subscriptions",
+            href: "/portal/subscriptions",
+            icon: CreditCard,
+          },
+          { label: "My invoices", href: "/portal/invoices", icon: ReceiptText },
+        ]
+      : user.role === "STAFF"
+        ? [
+            { label: "Staff Workspace", href: "/staff", icon: LayoutDashboard },
+            ...operatorNavigation.filter(
+              (item) => !["Dashboard", "Settings"].includes(item.label),
+            ),
+          ]
+        : operatorNavigation;
+  const roleLabel =
+    user.role === "ADMIN"
+      ? "Administrator"
+      : user.role === "STAFF"
+        ? "Staff"
+        : "Customer";
+  const initials = user.email.slice(0, 2).toUpperCase();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -64,8 +98,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const current =
     navigation.find((item) => item.href === pathname)?.label ?? "Workspace";
-
-  if (pathname === "/signup") return <>{children}</>;
 
   function sidebar(isMobile = false) {
     const small = collapsed && !isMobile;
@@ -78,7 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         >
           <Link
-            href="/"
+            href={roleHome(user.role)}
             aria-label="KAELIX PULSE home"
             onClick={() => setMobileOpen(false)}
           >
@@ -99,7 +131,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold">Kaelix workspace</p>
                 <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  Admin workspace
+                  {roleLabel} workspace
                 </p>
               </div>
               <ShieldCheck className="size-3.5 text-muted-foreground" />
@@ -151,7 +183,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 Your subscriptions, in sync.
               </p>
               <Link
-                href="/subscriptions"
+                href={
+                  user.role === "CUSTOMER"
+                    ? "/portal/subscriptions"
+                    : "/subscriptions"
+                }
                 className="relative mt-3 flex items-center gap-2 text-[11px] font-semibold text-primary"
               >
                 Explore subscriptions <ArrowUpRight className="size-3.5" />
@@ -192,14 +228,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         >
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eae2fb] text-[10px] font-semibold text-primary">
-            KA
+            {initials}
           </div>
           {!small && (
             <>
               <div className="flex-1">
-                <p className="text-xs font-semibold">Kaelix Admin</p>
+                <p className="text-xs font-semibold">{roleLabel}</p>
                 <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  admin@kaelix.demo
+                  {user.email}
                 </p>
               </div>
               <span className="size-1.5 rounded-full bg-emerald-500" />
@@ -300,26 +336,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <DropdownMenuTrigger asChild>
                 <button
                   className="flex items-center gap-2 rounded-lg p-1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Open admin profile"
+                  aria-label="Open account menu"
                 >
                   <span className="flex size-8 items-center justify-center rounded-full bg-[#eae2fb] text-[10px] font-semibold text-primary">
-                    KA
+                    {initials}
                   </span>
                   <ChevronDown className="size-3 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuLabel className="block border-b px-3 py-2 text-xs">
-                  Kaelix Admin{" "}
+                  {roleLabel}{" "}
                   <span className="mt-1 block text-[10px] text-muted-foreground">
-                    Demo administrator
+                    {user.email}
                   </span>
                 </DropdownMenuLabel>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Settings2 /> Workspace settings
+                  <Link href={roleHome(user.role)}>
+                    <Settings2 /> My workspace
                   </Link>
                 </DropdownMenuItem>
+                <form action={logoutUser}>
+                  <button
+                    type="submit"
+                    className="w-full rounded-md px-3 py-2 text-left text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    Log out
+                  </button>
+                </form>
                 <DropdownMenuItem onSelect={() => setHelpOpen(true)}>
                   <BookOpen /> Getting started
                 </DropdownMenuItem>
@@ -337,7 +381,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span>© 2026 KAELIX PULSE. Built to keep you in rhythm.</span>
           <span className="flex items-center gap-2">
             <span className="size-1.5 rounded-full bg-primary" />
-            {pathname === "/" ? "Demo analytics" : "Connected workspace"}{" "}
+            {pathname === "/admin"
+              ? "Demo analytics"
+              : "Connected workspace"}{" "}
             <span className="text-[#ceccd6]">/</span> Odoo × Make-A-Ton
           </span>
         </footer>

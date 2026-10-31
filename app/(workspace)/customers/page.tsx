@@ -1,3 +1,4 @@
+import { RoleGate } from "@/components/auth/role-gate";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -63,7 +64,7 @@ async function CustomersData() {
     </Card>
   );
 }
-export default function CustomersPage() {
+function CustomersPageContent() {
   return (
     <div className="page-enter space-y-6">
       <WorkspaceHeading
@@ -75,5 +76,13 @@ export default function CustomersPage() {
         <CustomersData />
       </Suspense>
     </div>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <RoleGate roles={["ADMIN", "STAFF"]}>
+      <CustomersPageContent />
+    </RoleGate>
   );
 }

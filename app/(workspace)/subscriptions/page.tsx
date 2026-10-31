@@ -1,3 +1,4 @@
+import { RoleGate } from "@/components/auth/role-gate";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -91,7 +92,7 @@ async function SubscriptionsData() {
     </DataTable>
   );
 }
-export default function SubscriptionsPage() {
+function SubscriptionsPageContent() {
   return (
     <div className="page-enter space-y-6">
       <WorkspaceHeading
@@ -102,5 +103,13 @@ export default function SubscriptionsPage() {
         <SubscriptionsData />
       </Suspense>
     </div>
+  );
+}
+
+export default function SubscriptionsPage() {
+  return (
+    <RoleGate roles={["ADMIN", "STAFF"]}>
+      <SubscriptionsPageContent />
+    </RoleGate>
   );
 }

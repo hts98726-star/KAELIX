@@ -2,6 +2,14 @@ import { expect, test, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
+import { signIn } from "./helpers/auth";
+test.beforeEach(async ({ page }, info) => {
+  if (
+    !info.title.startsWith("signup handles") &&
+    !info.title.startsWith("signup and checkout")
+  )
+    await signIn(page, "ADMIN");
+});
 
 const prisma = new PrismaClient({
   datasources: { db: { url: process.env.KAELIX_TEST_DATABASE_URL! } },
@@ -40,8 +48,10 @@ test("signup handles mismatches and server validation, persists a hashed passwor
     .getByRole("button", { name: "Create account", exact: true })
     .click();
   await expect(page.getByText("Your passwords don’t match.")).toBeVisible();
-  await page.getByLabel("Password", { exact: true }).fill("weakpass");
-  await page.getByLabel("Confirm password", { exact: true }).fill("weakpass");
+  await page.getByLabel("Password", { exact: true }).fill("weakpassword");
+  await page
+    .getByLabel("Confirm password", { exact: true })
+    .fill("weakpassword");
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
@@ -62,7 +72,8 @@ test("signup handles mismatches and server validation, persists a hashed passwor
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   expect(user.passwordHash).not.toBe("StrongPass!");
   expect(await bcrypt.compare("StrongPass!", user.passwordHash)).toBe(true);
-  await page.getByRole("link", { name: "View customers", exact: true }).click();
+  await signIn(page, "ADMIN");
+  await page.goto("/customers");
   await expect(
     page.getByRole("heading", { name: email, exact: true }),
   ).toBeVisible();
@@ -213,6 +224,7 @@ test("signup and checkout fit mobile and expose accessible form controls", async
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
+  await signIn(page, "ADMIN");
   await selectCheckout(page);
   await page.evaluate(async () => {
     window.scrollTo(0, 0);

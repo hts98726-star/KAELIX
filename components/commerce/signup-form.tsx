@@ -41,7 +41,7 @@ export function SignupForm() {
     initialState,
   );
   const rules = [
-    { label: "8 or more characters", valid: password.length >= 8 },
+    { label: "9 or more characters", valid: password.length >= 9 },
     {
       label: "Uppercase & lowercase letters",
       valid: /[a-z]/.test(password) && /[A-Z]/.test(password),
@@ -62,17 +62,16 @@ export function SignupForm() {
           <strong className="break-all font-medium text-foreground">
             {email}
           </strong>{" "}
-          has been created. It’s ready to use when creating a subscription in
-          this workspace.
+          has been created. Log in to view your own subscriptions and invoices.
         </p>
         <Button asChild className="mt-7 w-full">
-          <Link href="/checkout">
-            Continue to checkout
+          <Link href="/login?registered=1">
+            Continue to login
             <ArrowRight />
           </Link>
         </Button>
         <Button asChild variant="ghost" className="mt-2 w-full">
-          <Link href="/customers">View customers</Link>
+          <Link href="/">Back to welcome</Link>
         </Button>
       </div>
     );
@@ -120,7 +119,7 @@ export function SignupForm() {
             type={visible ? "text" : "password"}
             autoComplete="new-password"
             required
-            minLength={8}
+            minLength={9}
             maxLength={72}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -174,7 +173,7 @@ export function SignupForm() {
           type="password"
           autoComplete="new-password"
           required
-          minLength={8}
+          minLength={9}
           maxLength={72}
           value={confirm}
           onChange={(event) => setConfirm(event.target.value)}
@@ -215,8 +214,8 @@ export function SignupForm() {
         )}
       </Button>
       <p className="text-center text-[11px] leading-6 text-muted-foreground">
-        An account is created when you submit this form. Checkout is a separate
-        step.
+        Signup creates a customer account. Your password is securely hashed
+        before it is saved.
       </p>
     </form>
   );

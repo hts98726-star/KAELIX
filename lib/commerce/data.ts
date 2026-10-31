@@ -1,6 +1,10 @@
+import "server-only";
+import { authorize } from "@/lib/auth/authorize";
+import { OPERATORS } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 
-export function getCustomers() {
+export async function getCustomers() {
+  await authorize(OPERATORS);
   return prisma.user.findMany({
     where: { role: "CUSTOMER" },
     orderBy: { createdAt: "desc" },
@@ -12,7 +16,8 @@ export function getCustomers() {
     },
   });
 }
-export function getProducts() {
+export async function getProducts() {
+  await authorize(OPERATORS);
   return prisma.product.findMany({
     orderBy: { name: "asc" },
     select: {
@@ -26,7 +31,8 @@ export function getProducts() {
     },
   });
 }
-export function getSubscriptions() {
+export async function getSubscriptions() {
+  await authorize(OPERATORS);
   return prisma.subscription.findMany({
     orderBy: { startDate: "desc" },
     include: {
@@ -35,7 +41,8 @@ export function getSubscriptions() {
     },
   });
 }
-export function getInvoices() {
+export async function getInvoices() {
+  await authorize(OPERATORS);
   return prisma.invoice.findMany({
     orderBy: { issueDate: "desc" },
     include: {
@@ -43,5 +50,22 @@ export function getInvoices() {
         select: { planNumber: true, user: { select: { email: true } } },
       },
     },
+  });
+}
+
+export async function getOwnSubscriptions() {
+  const user = await authorize(["CUSTOMER"]);
+  return prisma.subscription.findMany({
+    where: { userId: user.id },
+    orderBy: { startDate: "desc" },
+    include: { lines: { include: { product: { select: { name: true } } } } },
+  });
+}
+export async function getOwnInvoices() {
+  const user = await authorize(["CUSTOMER"]);
+  return prisma.invoice.findMany({
+    where: { subscription: { userId: user.id } },
+    orderBy: { issueDate: "desc" },
+    include: { subscription: { select: { planNumber: true } } },
   });
 }

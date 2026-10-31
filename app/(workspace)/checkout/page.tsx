@@ -1,3 +1,4 @@
+import { RoleGate } from "@/components/auth/role-gate";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -29,7 +30,7 @@ async function CheckoutData() {
     />
   );
 }
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   return (
     <div className="page-enter space-y-7">
       <WorkspaceHeading
@@ -41,5 +42,13 @@ export default function CheckoutPage() {
         <CheckoutData />
       </Suspense>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <RoleGate roles={["ADMIN", "STAFF"]}>
+      <CheckoutPageContent />
+    </RoleGate>
   );
 }

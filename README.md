@@ -7,6 +7,99 @@ KAELIX PULSE follows a subscription business — the problem statement's *Bright
 
 ---
 
+## Getting started after cloning (step by step)
+
+> You need **Node.js 22.13 or later** and **Git**. Commands are for Windows PowerShell. If PowerShell says *"running scripts is disabled"*, keep using `npm.cmd` / `npx.cmd` exactly as written. On macOS or Linux, use `npm` / `npx`.
+
+**1. Clone the project and open the folder**
+
+```powershell
+git clone https://github.com/hts98726-star/KAELIX.git
+cd KAELIX
+```
+
+**2. Install the packages**
+
+```powershell
+npm.cmd install
+```
+
+**3. Create the session secret** (writes a random `SESSION_SECRET` into `.env`; it is never printed)
+
+```powershell
+npm.cmd run auth:setup
+```
+
+**4. Create the database**
+
+```powershell
+npx.cmd prisma generate
+npm.cmd run db:setup
+```
+
+**5. Load the demo data and set the demo customer password**
+
+```powershell
+$env:KAELIX_DEMO_PASSWORD="<demo customer password>"; npm.cmd run db:seed-demo
+```
+
+This adds 24 customers, 6 products, 7 plans, taxes, discounts, quotation templates, 24 subscriptions, about 90 invoices, and about 80 payments. It runs only once and never deletes anything.
+
+**6. Create your admin account** (the project ships with no default admin password)
+
+```powershell
+$env:KAELIX_PROVISION_PASSWORD="<admin password>"; npm.cmd run auth:provision -- --email admin@kaelix.test --role ADMIN
+```
+
+Passwords must be longer than 8 characters and include an uppercase letter, a lowercase letter, and a special character.
+
+**7. Start the website**
+
+```powershell
+npm.cmd run dev
+```
+
+Keep this terminal open while you use the site.
+
+**8. Open it in your browser**
+
+- On this computer: **http://localhost:3000**
+- From a phone or laptop on the same Wi-Fi: **http://\<your computer's IP\>:3000** (shown as *Network* when the server starts)
+
+**9. Log in and check it works**
+
+| Role | Email | Password | Opens |
+| --- | --- | --- | --- |
+| **Admin** | `admin@kaelix.test` | ________________ *(the password from step 6)* | `/admin`: live dashboard, billing, reports, configuration |
+| **Customer** | `olivia.rhye@demo.brightloop.test` | ________________ *(the password from step 5)* | `/portal`: only Olivia's own subscription and invoices |
+| **Staff** | *(create one as admin: Settings → Team)* | ________________ *(set when you create it)* | `/staff`: day-to-day operations |
+
+Any other demo customer works with the same password: `phoenix.baker@…`, `drew.cano@…`, `natali.craig@…`, and so on, all ending in `@demo.brightloop.test`.
+
+**10. Try the main flow** (as admin)
+
+1. **Dashboard**: live metrics, revenue chart, plan mix, recent subscriptions.
+2. **Subscriptions → New subscription** → template *Enterprise ERP rollout* → **Save quotation** → **Confirm** → **Start subscription**.
+3. **Invoices → Run billing now** (run it twice: nothing is billed twice).
+4. Open a draft invoice → **Confirm invoice** → **Record payment** → **Paid** → **Print**.
+5. **Reports**, **Configuration**, and **Settings → Team**.
+
+To log out, click your initials (top right) → **Log out**.
+
+**Troubleshooting**
+
+| Problem | Fix |
+| --- | --- |
+| *"running scripts is disabled"* | Use `npm.cmd` / `npx.cmd` instead of `npm` / `npx`. |
+| *"Port 3000 is in use"* / *"Another next dev server is already running"* | The site is already running; open http://localhost:3000. To restart it, stop the old process with `taskkill /PID <pid shown> /F`, then run step 7 again. |
+| *"Workspace data is unavailable"* | Stop the server, run `npx.cmd prisma generate` and `npm.cmd run db:setup`, then start it again. |
+| Seed says *"Demo data is already present"* | Expected: it adds data only once. Re-running it with `KAELIX_DEMO_PASSWORD` set only changes the demo customers' password. |
+| Forgot a password | Use **Forgot your password?** on the login page. In development, the reset link prints in the terminal running the server. |
+
+> Each teammate has their own local database. `git pull` shares code, not data. After pulling, run `npx.cmd prisma generate` and `npm.cmd run db:setup` (with the server stopped).
+
+---
+
 ## Features
 
 | Area | What works |
@@ -37,44 +130,10 @@ Next.js 16.4 (App Router, Server Actions, Cache Components) · React 19 · TypeS
 
 ---
 
-## Quick start (Windows PowerShell)
+## More setup options
 
-> Requires **Node.js 22.13+**. If PowerShell says *"running scripts is disabled"*, use `npm.cmd` / `npx.cmd` as shown (or `npm` / `npx` in other shells).
-
-```powershell
-git clone https://github.com/hts98726-star/KAELIX.git
-cd KAELIX
-npm.cmd install
-npm.cmd run auth:setup          # writes a random SESSION_SECRET to .env (never printed)
-npx.cmd prisma generate
-npm.cmd run db:setup            # creates/updates prisma/dev.db without deleting data
-```
-
-**Load the demo data** (24 customers, 6 products, 7 plans, taxes, discounts, templates, 24 subscriptions, ~90 invoices, ~80 payments):
-
-```powershell
-$env:KAELIX_DEMO_PASSWORD="Choose!AStrongOne1"; npm.cmd run db:seed-demo
-```
-
-The seed is additive and runs only once: it backs up the database first and never deletes anything. Re-running with `KAELIX_DEMO_PASSWORD` set only updates the demo customers' passwords. Demo customers use emails like `olivia.rhye@demo.brightloop.test`.
-
-**Create an administrator** (there are no default admin passwords):
-
-```powershell
-$env:KAELIX_PROVISION_PASSWORD="Your!StrongPass1"; npm.cmd run auth:provision -- --email admin@yourco.test --role ADMIN
-```
-
-Use `--role STAFF` for staff from the terminal, or add staff from **Settings → Team** once you're signed in as admin.
-
-**Run it:**
-
-```powershell
-npm.cmd run dev
-```
-
-Open **http://localhost:3000**. Admins land on `/admin`, staff on `/staff`, customers on `/portal`.
-
-> Each teammate has their own local database. `git pull` shares code and schema, not records. After pulling schema changes, stop the dev server, then run `npx prisma generate` and `npm run db:setup`.
+- **Add staff from the terminal:** `$env:KAELIX_PROVISION_PASSWORD="<password>"; npm.cmd run auth:provision -- --email staff@yourco.test --role STAFF`
+- **Another database:** set `DATABASE_URL` (the provider stays SQLite) and provision it with the same schema.
 
 ---
 
